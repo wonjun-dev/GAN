@@ -20,6 +20,7 @@ parser.add_argument(
     default="mnist",
     help="dataset for training",
 )
+parser.add_argument("--latent_dim", type=int, default=64, help="dimension of noise z")
 opt = parser.parse_args()
 print("Runnint Options: \n", opt)
 
