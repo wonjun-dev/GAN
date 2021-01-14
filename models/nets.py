@@ -36,7 +36,7 @@ class Discriminator(nn.Module):
         # Define layers
         def _block(in_dim, out_dim, p=0.2):
             block = [nn.Linear(in_dim, out_dim)]
-            block.append(nn.MaxPool1d)  # maxout activation
+            block.append(nn.LeakyReLU())
             if p > 0:
                 block.append(nn.Dropout(p))
             return block

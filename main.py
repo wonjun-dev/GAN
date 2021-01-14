@@ -1,6 +1,7 @@
 import os
 import argparse
 import numpy as np
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -8,6 +9,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST, CIFAR10
 from torchvision import transforms as transforms
 from torchvision.utils import save_image
+
 from models.nets import Generator, Discriminator
 
 parser = argparse.ArgumentParser()
@@ -27,7 +29,9 @@ print("Running Options: \n", opt)
 
 
 def train():
-    pass
+
+    for epoch in tqdm(range(opt.n_epochs)):
+        print(epoch)
 
 
 if __name__ == "__main__":
@@ -81,6 +85,7 @@ if __name__ == "__main__":
 
     # Define loss & optimizer
     loss = nn.BCELoss()
-    optimizer = torch.optim.Adam(lr=opt.lr)
+    optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr)
+    optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr)
 
     train()
