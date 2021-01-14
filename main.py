@@ -15,7 +15,7 @@ from models.nets import Generator, Discriminator
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=100, help="number of sepochs")
 parser.add_argument("--batch_size", type=int, default=128)
-parser.add_argument("-lr", type=float, default=1e-3)
+parser.add_argument("-lr", type=float, default=1e-4)
 parser.add_argument(
     "--dataset",
     type=str,
@@ -23,7 +23,7 @@ parser.add_argument(
     default="mnist",
     help="dataset for training",
 )
-parser.add_argument("--latent_dim", type=int, default=64, help="dimension of noise z")
+parser.add_argument("--latent_dim", type=int, default=100, help="dimension of noise z")
 opt = parser.parse_args()
 print("Running Options: \n", opt)
 
@@ -42,6 +42,7 @@ def train():
             z = torch.tensor(
                 np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)), device=device, dtype=torch.float32
             )
+
             # Generate imgs
             fake_imgs = generator(z)     
 
@@ -62,8 +63,15 @@ def train():
             log = f"Epoch: {epoch}/{opt.n_epochs}, loss_G: {loss_G}, loss_D: {loss_D}"
             print(log)
 
-        os.makedirs('./images', exist_ok=True)
-        save_image(fake_imgs.data[:25], f"images/{epoch}.png", nrow=5, normalize=True)
+        scheduler_D.step()
+        scheduler_G.step()
+
+        # Save fake images
+        fake_img_dir = os.path.join('./images', opt.dataset)
+        os.makedirs(fake_img_dir, exist_ok=True)
+        save_image(fake_imgs.data[:25], f"{fake_img_dir}/epoch_{epoch}.png", nrow=5, normalize=True)
+
+        # TODO Tensorboard, logging
 
 
 if __name__ == "__main__":
@@ -125,8 +133,9 @@ if __name__ == "__main__":
         discriminator.cuda()
         loss.cuda()
     
-
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr)
+    scheduler_G = torch.optim.lr_scheduler.StepLR(optimizer_G, step_size=20, gamma=0.5)
+    scheduler_D = torch.optim.lr_scheduler.StepLR(optimizer_D, step_size=20, gamma=0.5)
 
     train()

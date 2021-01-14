@@ -34,7 +34,7 @@ class Discriminator(nn.Module):
     def __init__(self, img_dims):
         super(Discriminator, self).__init__()
         # Define layers
-        def _block(in_dim, out_dim, p=0.2):
+        def _block(in_dim, out_dim, p=0.1):
             block = [nn.Linear(in_dim, out_dim)]
             if p > 0:
                 block.append(nn.LeakyReLU())
@@ -44,7 +44,8 @@ class Discriminator(nn.Module):
         self.model = nn.Sequential(
             *_block(np.prod(img_dims), 256),
             *_block(256, 64),
-            *_block(64, 1, p=0),
+            *_block(64, 32),
+            *_block(32, 1, p=0),
             nn.Sigmoid(),
         )
 
