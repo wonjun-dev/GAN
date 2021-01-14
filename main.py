@@ -13,6 +13,7 @@ from models.nets import Generator, Discriminator
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=100, help="number of sepochs")
 parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("-lr", type=float, default=1e-3)
 parser.add_argument(
     "--dataset",
     type=str,
@@ -74,10 +75,12 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    # Define model & loss function
+    # Define model
     generator = Generator(opt.latent_dim, img_dims)
     discriminator = Discriminator(img_dims)
 
-    # Define optimizer
+    # Define loss & optimizer
+    loss = nn.BCELoss()
+    optimizer = torch.optim.Adam(lr=opt.lr)
 
     train()
