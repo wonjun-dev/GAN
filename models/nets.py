@@ -39,6 +39,7 @@ class Discriminator(nn.Module):
             block.append(nn.LeakyReLU())
             if p > 0:
                 block.append(nn.Dropout(p))
+            return block
 
         self.model = nn.Sequential(
             *_block(np.prod(img_dims), 256),
