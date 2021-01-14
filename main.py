@@ -22,7 +22,7 @@ parser.add_argument(
 )
 parser.add_argument("--latent_dim", type=int, default=64, help="dimension of noise z")
 opt = parser.parse_args()
-print("Runnint Options: \n", opt)
+print("Running Options: \n", opt)
 
 
 def train():
@@ -30,8 +30,6 @@ def train():
 
 
 if __name__ == "__main__":
-    ## Define model & loss function
-
     ## Define dataset & dataloader
     dataset_name = opt.dataset
     data_root = os.path.join("./data", dataset_name)
@@ -75,6 +73,10 @@ if __name__ == "__main__":
         batch_size=opt.batch_size,
         shuffle=False,
     )
+
+    # Define model & loss function
+    generator = Generator(opt.latent_dim, img_dims)
+    discriminator = Discriminator(img_dims)
 
     # Define optimizer
 
