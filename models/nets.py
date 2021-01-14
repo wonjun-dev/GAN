@@ -21,7 +21,7 @@ class Generator(nn.Module):
             *_block(256, 512),
             *_block(512, 1024),
             nn.Linear(1024, np.prod(img_dims)),
-            nn.Sigmoid(),
+            nn.Tanh(),
         )
 
     def forward(self, z):
@@ -36,21 +36,20 @@ class Discriminator(nn.Module):
         # Define layers
         def _block(in_dim, out_dim, p=0.2):
             block = [nn.Linear(in_dim, out_dim)]
-            block.append(nn.LeakyReLU())
             if p > 0:
+                block.append(nn.LeakyReLU())
                 block.append(nn.Dropout(p))
             return block
 
         self.model = nn.Sequential(
             *_block(np.prod(img_dims), 256),
             *_block(256, 64),
-            *_block(64, 32),
-            nn.Linear(32, 1),
+            *_block(64, 1, p=0),
             nn.Sigmoid(),
         )
 
     def forward(self, img):
         # Define forward pass
-        x = img.view(img.size(0), np.prod(img.size()[1:]))
+        x = img.view(img.size(0), -1)
         x = self.model(x)
         return x

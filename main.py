@@ -14,7 +14,7 @@ from models.nets import Generator, Discriminator
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=100, help="number of sepochs")
-parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--batch_size", type=int, default=128)
 parser.add_argument("-lr", type=float, default=1e-3)
 parser.add_argument(
     "--dataset",
@@ -61,6 +61,9 @@ def train():
 
             log = f"Epoch: {epoch}/{opt.n_epochs}, loss_G: {loss_G}, loss_D: {loss_D}"
             print(log)
+
+        os.makedirs('./images', exist_ok=True)
+        save_image(fake_imgs.data[:25], f"images/{epoch}.png", nrow=5, normalize=True)
 
 
 if __name__ == "__main__":
