@@ -31,41 +31,43 @@ print("Running Options: \n", opt)
 def train():
     for epoch in tqdm(range(opt.n_epochs)):
         for i, (real_imgs, _) in enumerate(train_loader):
-
+            if device == "cuda":
+                real_imgs = real_imgs.cuda()
+    
             # Target
-            real = torch.ones(real_imgs.size(0), 1, device=device)
-            fake = torch.zeros(real_imgs.size(0), 1, device=device)
-
-            #  ** Iteration for generator **
-            optimizer_G.zero_grad()
+            real = torch.ones(real_imgs.size(0), 1, device=device, dtype=torch.float32)
+            fake = torch.zeros(real_imgs.size(0), 1, device=device, dtype=torch.float32)
 
             # Noise(z) sampling from normal distribution
             z = torch.tensor(
-                np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)), device=device
+                np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)), device=device, dtype=torch.float32
             )
+            # Generate imgs
+            fake_imgs = generator(z)     
 
-            # Generate image
-            fake_imgs = generator(z)
+            # ** Iteration for discriminator **
+            optimizer_D.zero_grad()
+            real_loss = loss(discriminator(real_imgs), real)  # -log(D(x)
+            fake_loss = loss(discriminator(fake_imgs.detach()), fake)  # -log(1-D(G(z)))
+            loss_D = real_loss + fake_loss # -(log(D(x)) + log(1-D(G(z))))
+            loss_D.backward()
+            optimizer_D.step()
 
-            # Generator loss
+            #  ** Iteration for generator **
+            optimizer_G.zero_grad()   
             loss_G = loss(discriminator(fake_imgs), real)  # -log(D(G(z)))
             loss_G.backward()
             optimizer_G.step()
 
-            # ** Iteration for discriminator **
-
-            # Discriminator loss
-            real_loss = loss(discriminator(real_imgs), real)  # -log(D(x)
-            fake_loss = loss(discriminator(fake_imgs), fake)  # -log(1-D(G(z)))
-            loss_d = real_loss + fake_loss  # -(log(D(x)) + log(1-D(G(z))))
-
-            loss_d.backward()
-            optimizer_D.step()
-
-            print(f"Epoch: {e}/{opt.n_epochs}, loss_G: {loss_G}, loss_D: {loss_D}")
+            log = f"Epoch: {epoch}/{opt.n_epochs}, loss_G: {loss_G}, loss_D: {loss_D}"
+            print(log)
 
 
 if __name__ == "__main__":
+    # Set device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(device)
+
     ## Define dataset & dataloader
     dataset_name = opt.dataset
     data_root = os.path.join("./data", dataset_name)
@@ -110,15 +112,18 @@ if __name__ == "__main__":
         shuffle=False,
     )
 
-    # Define model
+    # Define model, loss, optimizer
     generator = Generator(opt.latent_dim, img_dims)
     discriminator = Discriminator(img_dims)
-
-    # Define loss & optimizer
     loss = nn.BCELoss()
+
+    if device == "cuda":
+        generator.cuda()
+        discriminator.cuda()
+        loss.cuda()
+    
+
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr)
 
-    # Set device
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     train()
