@@ -29,9 +29,40 @@ print("Running Options: \n", opt)
 
 
 def train():
-
     for epoch in tqdm(range(opt.n_epochs)):
-        print(epoch)
+        for i, (real_imgs, _) in enumerate(train_loader):
+
+            # Target
+            real = torch.ones(real_imgs.size(0), 1, device=device)
+            fake = torch.zeros(real_imgs.size(0), 1, device=device)
+
+            #  ** Iteration for generator **
+            optimizer_G.zero_grad()
+
+            # Noise(z) sampling from normal distribution
+            z = torch.tensor(
+                np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)), device=device
+            )
+
+            # Generate image
+            fake_imgs = generator(z)
+
+            # Generator loss
+            loss_G = loss(discriminator(fake_imgs), real)  # -log(D(G(z)))
+            loss_G.backward()
+            optimizer_G.step()
+
+            # ** Iteration for discriminator **
+
+            # Discriminator loss
+            real_loss = loss(discriminator(real_imgs), real)  # -log(D(x)
+            fake_loss = loss(discriminator(fake_imgs), fake)  # -log(1-D(G(z)))
+            loss_d = real_loss + fake_loss  # -(log(D(x)) + log(1-D(G(z))))
+
+            loss_d.backward()
+            optimizer_D.step()
+
+            print(f"Epoch: {e}/{opt.n_epochs}, loss_G: {loss_G}, loss_D: {loss_D}")
 
 
 if __name__ == "__main__":
@@ -88,4 +119,6 @@ if __name__ == "__main__":
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr)
 
+    # Set device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     train()
