@@ -33,29 +33,31 @@ def train():
         for i, (real_imgs, _) in enumerate(train_loader):
             if device == "cuda":
                 real_imgs = real_imgs.cuda()
-    
+
             # Target
             real = torch.ones(real_imgs.size(0), 1, device=device, dtype=torch.float32)
             fake = torch.zeros(real_imgs.size(0), 1, device=device, dtype=torch.float32)
 
             # Noise(z) sampling from normal distribution
             z = torch.tensor(
-                np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)), device=device, dtype=torch.float32
+                np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)),
+                device=device,
+                dtype=torch.float32,
             )
 
             # Generate imgs
-            fake_imgs = generator(z)     
+            fake_imgs = generator(z)
 
             # ** Iteration for discriminator **
             optimizer_D.zero_grad()
             real_loss = loss(discriminator(real_imgs), real)  # -log(D(x)
             fake_loss = loss(discriminator(fake_imgs.detach()), fake)  # -log(1-D(G(z)))
-            loss_D = real_loss + fake_loss # -(log(D(x)) + log(1-D(G(z))))
+            loss_D = real_loss + fake_loss  # -(log(D(x)) + log(1-D(G(z))))
             loss_D.backward()
             optimizer_D.step()
 
             #  ** Iteration for generator **
-            optimizer_G.zero_grad()   
+            optimizer_G.zero_grad()
             loss_G = loss(discriminator(fake_imgs), real)  # -log(D(G(z)))
             loss_G.backward()
             optimizer_G.step()
@@ -67,7 +69,7 @@ def train():
         scheduler_G.step()
 
         # Save fake images
-        fake_img_dir = os.path.join('./images', opt.dataset)
+        fake_img_dir = os.path.join("./images", opt.dataset)
         os.makedirs(fake_img_dir, exist_ok=True)
         save_image(fake_imgs.data[:25], f"{fake_img_dir}/epoch_{epoch}.png", nrow=5, normalize=True)
 
@@ -132,7 +134,7 @@ if __name__ == "__main__":
         generator.cuda()
         discriminator.cuda()
         loss.cuda()
-    
+
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr)
     scheduler_G = torch.optim.lr_scheduler.StepLR(optimizer_G, step_size=20, gamma=0.5)
