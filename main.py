@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST, CIFAR10
 from torchvision import transforms as transforms
 from torchvision.utils import save_image
+from torch.utils.tensorboard import SummaryWriter
 
 from models.nets import Generator, Discriminator
 
@@ -24,54 +25,74 @@ parser.add_argument(
     help="dataset for training",
 )
 parser.add_argument("--latent_dim", type=int, default=100, help="dimension of noise z")
+parser.add_argument("--expr_name", type=str, default="baseline", help="name of the experiment")
 opt = parser.parse_args()
 print("Running Options: \n", opt)
+writer = SummaryWriter(f"runs/{opt.dataset}/{opt.expr_name}")
 
 
 def train():
+    running_loss_G = 0.0
+    running_loss_D = 0.0
+
     for epoch in tqdm(range(opt.n_epochs)):
         for i, (real_imgs, _) in enumerate(train_loader):
             if device == "cuda":
                 real_imgs = real_imgs.cuda()
-    
+
             # Target
             real = torch.ones(real_imgs.size(0), 1, device=device, dtype=torch.float32)
             fake = torch.zeros(real_imgs.size(0), 1, device=device, dtype=torch.float32)
 
             # Noise(z) sampling from normal distribution
             z = torch.tensor(
-                np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)), device=device, dtype=torch.float32
+                np.random.normal(0, 1, size=(real_imgs.size(0), opt.latent_dim)),
+                device=device,
+                dtype=torch.float32,
             )
 
             # Generate imgs
-            fake_imgs = generator(z)     
+            fake_imgs = generator(z)
 
             # ** Iteration for discriminator **
             optimizer_D.zero_grad()
             real_loss = loss(discriminator(real_imgs), real)  # -log(D(x)
             fake_loss = loss(discriminator(fake_imgs.detach()), fake)  # -log(1-D(G(z)))
-            loss_D = real_loss + fake_loss # -(log(D(x)) + log(1-D(G(z))))
+            loss_D = real_loss + fake_loss  # -(log(D(x)) + log(1-D(G(z))))
             loss_D.backward()
             optimizer_D.step()
 
             #  ** Iteration for generator **
-            optimizer_G.zero_grad()   
+            optimizer_G.zero_grad()
             loss_G = loss(discriminator(fake_imgs), real)  # -log(D(G(z)))
             loss_G.backward()
             optimizer_G.step()
 
-            log = f"Epoch: {epoch}/{opt.n_epochs}, loss_G: {loss_G}, loss_D: {loss_D}"
-            print(log)
+            running_loss_G += loss_G.item()
+            running_loss_D += loss_D.item()
+
+            # TODO Tensorboard, logging
+            if i % 10 == 9:  # every 10 minibatch
+                log = f"Epoch: {epoch}/{opt.n_epochs}, loss_G: {running_loss_G/10}, loss_D: {running_loss_D/10}"
+                print(log)
+
+                writer.add_scalar(
+                    "Generator loss", running_loss_G / 10, epoch * len(train_loader) + i
+                )
+                writer.add_scalar(
+                    "Discriminator loss", running_loss_D / 10, epoch * len(train_loader) + i
+                )
+
+                running_loss_G = 0.0
+                running_loss_D = 0.0
 
         scheduler_D.step()
         scheduler_G.step()
 
         # Save fake images
-        fake_img_dir = os.path.join('./images', opt.dataset)
+        fake_img_dir = os.path.join("./images", opt.dataset)
         os.makedirs(fake_img_dir, exist_ok=True)
         save_image(fake_imgs.data[:25], f"{fake_img_dir}/epoch_{epoch}.png", nrow=5, normalize=True)
-
-        # TODO Tensorboard, logging
 
 
 if __name__ == "__main__":
@@ -132,7 +153,7 @@ if __name__ == "__main__":
         generator.cuda()
         discriminator.cuda()
         loss.cuda()
-    
+
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=opt.lr)
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr)
     scheduler_G = torch.optim.lr_scheduler.StepLR(optimizer_G, step_size=20, gamma=0.5)
